@@ -6,12 +6,11 @@ Material for SpikeInterface Tutorial @ Neuralnet 2026
 ## Data spike sorting
 
 
-You will need to download theses reduced dataset from this link:
+You will need to download this [folder](https://filesender.renater.fr/?s=download&token=e07dbaac-ecc7-4825-a615-496f2bdcfa45)
+Please unzip all in sub folders.
 
-LINK TODO
+Note that this dataset is originally from [dansiset 000939](https://dandiarchive.org/dandiset/000939/0.260512.1701/files?location=sub-A3702) but in a shorter version (90s). You can eventually download the original nwb file but is not mandatory.
 
-
-This data was originally collated and organised for the [Ephys track](https://neuroinformatics.dev/open-software-summer-school/2026/extracellular-electrophysiology.html) of the [Open Software Summer School](https://neuroinformatics.dev/open-software-summer-school/index.html). You can read more about the data [here](https://neuroinformatics.dev/course_ephys_osss/course-data.html).
 
 
 
@@ -117,10 +116,13 @@ installation instructions: see [`notebooks_spiketrain_analysis/README.md`](noteb
 
 # Overview of Bonus datasets for sorting
 
+If you do not have your own dataset for spike sorting you should download theses datasets.
+Please do not try to download then during the workshop.
 
 The download links:
  * In vivo : https://filesender.renater.fr/?s=download&token=c22f3a9c-d8e8-48e7-814a-a9adcf33cafa
  * Invitro : https://filesender.renater.fr/?s=download&token=ecb68904-4454-4fa2-8c29-2f7834b249a8
+
 
 **Please do think about unzipping the data prior to the school!**
 
