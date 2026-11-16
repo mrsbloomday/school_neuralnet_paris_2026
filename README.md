@@ -121,7 +121,7 @@ Please do not try to download then during the workshop.
 
 The download links:
  * In vivo : https://filesender.renater.fr/?s=download&token=c22f3a9c-d8e8-48e7-814a-a9adcf33cafa
- * Invitro : https://filesender.renater.fr/?s=download&token=ecb68904-4454-4fa2-8c29-2f7834b249a8
+ * In vitro : https://filesender.renater.fr/?s=download&token=ecb68904-4454-4fa2-8c29-2f7834b249a8
 
 
 **Please do think about unzipping the data prior to the school!**
