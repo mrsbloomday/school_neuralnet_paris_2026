@@ -24,6 +24,8 @@ result_folder.mkdir(exist_ok=True)
 download_link = "https://api.dandiarchive.org/api/assets/6fe925dd-ea41-4a84-9cee-ca6bb039edcb/download?content_disposition=inline"
 local_nwb_file = data_folder / "sub-A3702_ses-191126_behavior+ecephys.nwb"
 
+
+small_file_90s = data_folder / "dandiset-000939-90s"
 preprocessed_file = result_folder / f"{name}-preprocessed"
 
 job_kwargs = dict(n_jobs=16, chunk_duration='1s')
@@ -52,6 +54,13 @@ def _fix_probecosmetics(rec):
     probe._contact_shape_params = np.array([{"width": 11.0,"height": 15.0}]*n)
     probe.create_auto_shape()
     rec._probegroup.probes[0] = probe
+
+
+def save_90s():
+    raw_rec = si.read_nwb_recording(local_nwb_file, electrical_series_path="acquisition/ElectricalSeries")
+    _fix_probecosmetics(raw_rec)
+    rec = raw_rec.time_slice(0., 90.)
+    rec = rec.save(folder=small_file_90s, format="binary")
 
 def do_preprocess():
     raw_rec = si.read_nwb_recording(local_nwb_file, electrical_series_path="acquisition/ElectricalSeries")
@@ -160,8 +169,9 @@ def run_some_analyzers():
 
 if __name__ == '__main__':
     # download_dandiset()
+    save_90s()
     # do_preprocess()
     # run_some_sorters()
-    run_some_analyzers()
+    # run_some_analyzers()
 
 

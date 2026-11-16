@@ -13,8 +13,11 @@ from spikeinterface_gui import run_mainwindow
 base_folder = Path("/mnt/data/sam/DataSpikeSorting/school_neuralnet_2026/")
 # base_folder = Path("/home/pierre/school_neuralnet_2026/")
 
+
 data_folder = base_folder / "data"
+# name = "sub-A3702_ses-191126-90s"
 name = "sub-A3702_ses-191126-3600s"
+
 result_folder = base_folder / "results" / name
 result_folder.mkdir(exist_ok=True)
 
@@ -48,23 +51,11 @@ def example3():
         curation=True
     )
 
-def example4():
-    # TODO with Pierre
-    curation_dict = {}
-
-    # curation mode with pre existing curation format
-    run_mainwindow(
-        analyzer,
-        curation=True,
-        curation_dict=curation_dict,
-    )
-
 
 
 if __name__ == '__main__':
-    # example1()
+    example1()
     # example2()
-    example3()
-    # example4()
+    # example3()
 
     
