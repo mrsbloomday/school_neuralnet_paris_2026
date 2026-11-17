@@ -11,13 +11,16 @@
 # 2. the **inter-spike intervals (ISIs)**: the time between two consecutive spikes,
 #    which tells us *how regular* a neuron fires.
 #
-# **Dataset.** Session `216300_20200518-probe0.nwb`: a mouse doing an aversive conditioning task
-# (sounds, sometimes followed by an air puff) while a Neuropixels probe records in the
-# medial prefrontal cortex (mPFC). Here we will focus on three prefrontal areas:
+# **Dataset.** Session `156131_20191112-probe0` of
+# [Calvigioni, Fuzik, Le Merre et al. (2023)](https://doi.org/10.1038/s41593-023-01367-8): a mouse
+# doing an aversive conditioning task (sounds, optogenetic stimulations, air puffs, see section 1)
+# while a Neuropixels probe records in the medial prefrontal cortex (mPFC) and nearby regions. We
+# use the same session in notebooks 02 and 03. Here we will focus on four prefrontal areas:
 #
 # - **ACA**: anterior cingulate area,
 # - **PL**: prelimbic area,
-# - **ILA**: infralimbic area.
+# - **ILA**: infralimbic area,
+# - **ORB**: orbital area (here its medial part, ORBm).
 #
 # The data are stored in an **NWB** file (Neurodata Without Borders), a standard format
 # for neurophysiology data, that we read with [Judananas](https://github.com/PierreLeMerre/Judananas.jl),
@@ -31,19 +34,19 @@
 # The session is shared on the [DANDI Archive](https://dandiarchive.org), the public archive
 # for neurophysiology data, in [Dandiset 000473](https://dandiarchive.org/dandiset/000473)
 # (*Esr1+ hypothalamic-habenula neurons shape aversive states*). We use the file
-# `sub-216300/sub-216300_ses-216300-20200518-probe0_ecephys+ogen.nwb` (5.3 GB).
+# `sub-156131/sub-156131_ses-156131-20191112-probe0_ecephys+ogen.nwb` (5.6 GB).
 #
 # **Download the file** to a folder of your choice on your computer
 # (keep it out of the git repo: it is far too big for GitHub). Either:
 #
 # - in the browser: open the
-#   [files of the Dandiset](https://dandiarchive.org/dandiset/000473/0.261102.1657/files?location=sub-216300),
+#   [files of the Dandiset](https://dandiarchive.org/dandiset/000473/0.261102.1657/files?location=sub-156131),
 #   and click the download icon next to the file;
 # - or in a terminal, from the `python/` folder, with the DANDI command-line tool
 #   (replace `/path/to/your/data/folder` by the folder where you want to save the file):
 #
 #   ```bash
-#   uv run dandi download -o /path/to/your/data/folder "https://api.dandiarchive.org/api/assets/1465c75e-34ee-4f88-954d-656c2aba0550/download/"
+#   uv run dandi download -o /path/to/your/data/folder "https://api.dandiarchive.org/api/assets/6b424b64-764a-4677-a828-49094420e930/download/"
 #   ```
 #
 # Then write the full path to the file in `NWB` in the cell below.
@@ -67,7 +70,7 @@ default(left_margin = 5Plots.mm, bottom_margin = 5Plots.mm)  # room for the axis
 TAB = palette(:tab10)  # the same 10 colors as matplotlib: blue, orange, green, red, purple, brown...
 
 # Full path to the NWB file you downloaded. Change it to where you saved it.
-NWB = "/path/to/your/data/folder/sub-216300_ses-216300-20200518-probe0_ecephys+ogen.nwb"
+NWB = "/path/to/your/data/folder/sub-156131_ses-156131-20191112-probe0_ecephys+ogen.nwb"
 
 isfile(NWB) || error("No NWB file at $NWB: set NWB to the downloaded file")
 
@@ -100,12 +103,39 @@ units
 #
 # Let's look at the trials as well: each row is a trial with its start and end time
 # in seconds, and the extra columns describe the trial (sound, air puff, optogenetics, ...).
-# Each trial lasts 2 s.
 
 # %%
 println("number of units : ", length(units))
 println("number of trials: ", length(trials))
 trials
+
+# %% [markdown]
+# **The trial structure.** Each trial lasts 2 s, and the trials are separated by a few seconds
+# without stimulus (the inter-trial intervals). The session is organized in **blocks** of trials
+# (column `Block`):
+#
+# | Block | Trials | What happens at the start of the trial |
+# |---|---|---|
+# | 1 | 50 | a sound (pure tone) |
+# | 2 | 100 | the same sound, followed by an optogenetic stimulation of the lateral hypothalamus → lateral habenula pathway (internal aversive) |
+# | 3 | 50 | the sound alone again (as in block 1) |
+# | 4 | 50 | a blue noise (a different sound), followed by an air puff to the eye (external aversive) |
+# | 5–12 | 320 | optogenetic stimulations only, at the end of the session (we don't use them here) |
+#
+# So blocks 1–4 make four groups of trials: the sound **before** the conditioning (block 1,
+# **pre-conditioning**), the conditioning itself (block 2, **sound + opto**: the mouse can learn
+# that the sound announces an aversive stimulation), the same sound **after** the conditioning
+# (block 3, **post-conditioning**: does the response to the sound change?), and the **air puff**
+# (block 4).
+# The optogenetic-only blocks 5–12 are a different experiment, with other stimulation
+# parameters: we leave them out of this notebook, and keep the 250 trials of blocks 1–4.
+# (The spike trains are not changed: they still cover the whole session.)
+
+# %%
+trials = trials[trials[:Block] .<= 4]  # keep the trials of blocks 1 to 4
+println("trials of blocks 1-4: ", length(trials))
+println("time of the first and last trial (s): ", round(starts(trials)[1], digits = 1), " ",
+        round(stops(trials)[end], digits = 1))
 
 # %% [markdown]
 # ## 2. Filter units: spike sorting, brain region, ...
@@ -121,7 +151,7 @@ trials
 # 3. **presence ratio > 0**: the unit fires during the session (see below);
 # 4. **amplitude cutoff < 0.1**: few spikes are missed because they are too small.
 #    This one needs the amplitude of every spike, which is not stored in this NWB file,
-#    so we cannot apply it here.
+#    so we cannot apply it here. We could go back to spikeinterface analyzer and add them here if needed.
 #
 # A last criterion, on the number of ISIs available before the trials, is applied in
 # section 4.4, once we have introduced ISIs.
@@ -135,7 +165,8 @@ trials
 #   spikes that do not belong to the neuron. This is our ISI violation ratio.
 # - `FS` and `RS` classify the waveform of each unit as **fast-spiking** (FS,
 #   narrow spike, putative interneuron) or **regular-spiking** (RS, broad spike, putative
-#   pyramidal neuron). A unit with neither label has no plausible waveform.
+#   pyramidal neuron). A unit with neither label has a waveform in between the two classes,
+#   that the file leaves unclassified (see notebook 02): we leave it out too.
 # - `location`: `units/electrodes` gives, for each unit, the row of the **electrode table** where
 #   it was recorded, and the column `location` of that table holds the brain area, with its
 #   cortical layer, using the Allen atlas names (e.g. `PL6a` = prelimbic area, layer 6a).
@@ -175,14 +206,14 @@ println("presence ratio, min / median: ", round(minimum(presence_ratio), digits 
 # pass the criteria.
 
 # %%
-# Regular expression: take "ACA", "PL" or "ILA" at the start of the location.
+# Regular expression: take "ACA", "PL", "ILA" or "ORB" at the start of the location.
 # Units in other areas get an empty string "".
-area = [m === nothing ? "" : m.match for m in match.(r"^(ACA|PL|ILA)", units[:location])]
+area = [m === nothing ? "" : m.match for m in match.(r"^(ACA|PL|ILA|ORB)", units[:location])]
 
 # Store it as a new metadata column called "area"
 units[:area] = area
 
-in_pfc = units[:area] .!= ""  # in one of our 3 areas
+in_pfc = units[:area] .!= ""  # in one of our 4 areas
 good = (units[:isi_fp] .< 0.1) .& (units[:cell_type] .!= "none") .& (units[:presence_ratio] .> 0)
 
 pfc = units[in_pfc .& good]  # selection with a vector of true/false, one per unit
@@ -227,13 +258,13 @@ println("min / max rate: ", round(minimum(rate_by_hand), digits = 3), " / ",
         round(maximum(rate_by_hand), digits = 1), " Hz")
 
 # %% [markdown]
-# Firing rates span **several orders of magnitude**, from less than 0.1 Hz to tens of Hz.
+# Firing rates span **several orders of magnitude (usually two)**, from about 0.1 Hz to tens of Hz.
 # On a linear axis, the slow units would all be squeezed against zero, so we plot the
 # histogram with **logarithmic bins** (each bin is a constant factor wider than the previous).
 
 # %%
 rate_bins = 10 .^ range(-2, 2, length = 33)  # 33 bin edges from 0.01 Hz to 100 Hz, evenly spaced in log
-area_colors = ["ACA" => TAB[1], "PL" => TAB[2], "ILA" => TAB[3]]  # one color per area
+area_colors = ["ACA" => TAB[1], "PL" => TAB[2], "ILA" => TAB[3], "ORB" => TAB[5]]  # one color per area
 
 fig = plot(size = (800, 400), xscale = :log10, xlabel = "Session rate (Hz, log scale)",
            ylabel = "Number of units", title = "Session firing rate of the PFC units")
@@ -302,14 +333,14 @@ fig
 # ### 3.2 Two example units with the same rate
 #
 # We now look at two units recorded in the same area and layer (**ILA6a**, infralimbic
-# area, layer 6a) with a similar **session rate**, about 8–10 Hz.
+# area, layer 6a) with a similar **session rate**, about 8 and 10 Hz.
 # If the rate were all there is to know about a spike train, these two units should look alike.
 #
 # In Judananas, `pfc[k]` is the k-th unit of the group (by position). To select a unit by its **id**,
-# we write `pfc[id = 185]`, and `pfc[:location, id = 185]` gives one of its metadata values.
+# we write `pfc[id = 55]`, and `pfc[:location, id = 55]` gives one of its metadata values.
 
 # %%
-examples = ["unit A" => 185, "unit B" => 228]  # name => unit id
+examples = ["unit A" => 55, "unit B" => 58]  # name => unit id
 colors = Dict("unit A" => TAB[1], "unit B" => TAB[2])  # one color per unit in all figures
 
 for (name, i) in examples
@@ -323,12 +354,12 @@ end
 # the **spontaneous activity** of the neurons.
 
 # %%
-window = IntervalSet(3020, 3030)  # from 3020 s to 3030 s
+window = IntervalSet(2340, 2350)  # from 2340 s to 2350 s
 
 panels = []
 for (name, i) in examples
     spikes_in_window = restrict(pfc[id = i], window)  # keep only the spikes inside the window
-    p = plot(spikes_in_window, color = colors[name], ylabel = name, xlims = (3020, 3030), xlabel = "")
+    p = plot(spikes_in_window, color = colors[name], ylabel = name, xlims = (2340, 2350), xlabel = "")
     plot!(p, intersect(trials, window), color = :gray)  # shade the trials inside the window
     push!(panels, p)
     println("$name: $(length(spikes_in_window)) spikes in 10 s")
@@ -339,7 +370,7 @@ fig = plot(panels..., layout = (2, 1), size = (1000, 300), link = :x, left_margi
            bottom_margin = 3Plots.mm)
 
 # %% [markdown]
-# The two units fire about the same number of spikes (~100 in 10 s), but **not in the same way**:
+# The two units fire about the same number of spikes (~90 in 10 s), but **not in the same way**:
 #
 # - **unit A** fires spikes spread out rather evenly in time;
 # - **unit B** fires **clusters of spikes** close together, separated by longer silences.
@@ -355,7 +386,7 @@ fig = plot(panels..., layout = (2, 1), size = (1000, 300), link = :x, left_margi
 # trial (the inter-trial interval, ITI). In this task, all stimuli (sounds, air puffs,
 # optogenetics) are delivered inside the trials, so these windows contain no stimulus.
 #
-# We take **all the trials**, and keep a window only if it does not overlap with the previous
+# We take **all the trials** (of blocks 1–4), and keep a window only if it does not overlap with the previous
 # trial (in this session the gap between trials is always more than 3 s, so all are kept).
 # `restrict` keeps only the spikes inside these intervals; the rate of the restricted spike
 # train is computed on its new time support: number of windows × 3 s.
@@ -406,10 +437,14 @@ end
 fig = plot(panels..., layout = (1, 2), size = (1200, 700), link = :y)
 
 # %% [markdown]
-# Trials are sorted in time (trial 1 is the earliest, at the bottom). Notice that unit B barely
-# fires before the first ~80 trials: the rate of a neuron is **not constant over a session**. It
-# can change with the behavioural state of the animal, with learning, or with the recording itself
-# (e.g. electrode drift). Keep this in mind when comparing rates!
+# Trials are sorted in time (trial 1 is the earliest, at the bottom). Here both units fire
+# steadily before the trials, from the first to the last trial. This is not always the case: the
+# rate of a neuron is **not necessarily constant over a session**. It can change with the
+# behavioural state of the animal, with learning, or with the recording itself (e.g. electrode
+# drift). Keep this in mind when comparing rates!
+#
+# Notice also that unit B fires **less before the trials** (~8 Hz) than over the whole session
+# (~10 Hz): it must fire more at other times, for example during the trials. Let's look.
 
 # %% [markdown]
 # **After the trial onset.** Obviously, what happens before the stimulus is a bit boring:
@@ -417,20 +452,22 @@ fig = plot(panels..., layout = (1, 2), size = (1200, 700), link = :y)
 # responds to the stimulus or not. We now align the spikes from 1 s before to 3 s after the
 # trial onset, and shade the trial (0 to 2 s).
 #
-# The trials are not all the same: there are sounds, sounds with optogenetic stimulation, air puffs
-# (with a blue-noise sound), and trials with optogenetic stimulation only. We use the metadata
-# columns of `trials` to give a type to each trial, and **group the rows of the raster by trial
-# type** (inside a group, trials stay in time order). Next to units A and B, we add a third
-# unit, **unit 288** (PL6a), that responds strongly.
+# The trials are not all the same (see the blocks in section 1): the sound before the conditioning
+# (block 1, **pre**), the sound followed by the optogenetic stimulation (block 2, **sound + opto**),
+# the sound after the conditioning (block 3, **post**) and the **air puff** (block 4, a blue noise
+# followed by an air puff). We give each trial the name of its block, and **group the rows of the
+# raster by trial type**, in the order of the session (inside a group, trials stay in time order). Next to units A and B, we add a third
+# unit, **unit 164** (PL5), that responds strongly.
 
 # %%
-post_units = [examples; "unit 288" => 288]  # name => unit id: units A, B and a responsive unit
-colors["unit 288"] = TAB[5]
+post_units = [examples; "unit 164" => 164]  # name => unit id: units A, B and a responsive unit
+colors["unit 164"] = TAB[5]
 
 # Type of each trial, from the metadata columns of the trials
-trial_type = [ap == 1 ? "air puff" : s == 1 ? (o == 1 ? "sound + opto" : "sound") : "opto only"
-              for (ap, s, o) in zip(trials[:airpuff], trials[:sound], trials[:optogenetics])]
-type_order = ["sound", "sound + opto", "air puff", "opto only"]  # order of the groups in the raster
+# Type of each trial, from its block (column :Block of the trials)
+block_names = Dict(1 => "sound (pre)", 2 => "sound + opto", 3 => "sound (post)", 4 => "air puff")
+trial_type = [block_names[Int(b)] for b in trials[:Block]]
+type_order = ["sound (pre)", "sound + opto", "sound (post)", "air puff"]  # order of the groups
 order = reduce(vcat, [findall(==(t), trial_type) for t in type_order])  # trials sorted by type
 sorted_onsets = starts(trials)[order]  # trial onsets, grouped by type (a vector: Ts would sort them)
 group_ends = cumsum([count(==(t), trial_type) for t in type_order])  # last row of each group
@@ -458,12 +495,16 @@ fig = plot(panels..., layout = (1, 3), size = (1500, 700), link = :y, left_margi
            bottom_margin = 5Plots.mm)
 
 # %% [markdown]
-# - **Unit A** fires about the same before and during the trials: it does not seem to respond.
-# - **Unit B** is hard to judge by eye: it is almost silent in the first trials of the session
-#   (most of the "sound" group), and its rate changes over the session.
-# - **Unit 288** fires a sharp burst of spikes about 0.1 s after the onset of the trials, in
-#   **every trial type**, even without a sound. In the air-puff trials, a second response comes
-#   about 0.8 s after the onset.
+# - **Unit A** fires **less** for about half a second after the onset of the sound (a lighter
+#   band in the raster): a decrease of the rate is also a response!
+# - **Unit B** fires a dense burst of spikes just after the onset, in **every trial type**. In the
+#   sound + opto and air-puff trials, a second response comes about 0.8 s after the onset: the
+#   optogenetic stimulation, or the air puff, which follow the sound.
+# - **Unit 164** fires a sharp burst of spikes about 0.1 s after the onset, clearest in the
+#   pre-conditioning trials; otherwise it is almost silent.
+#
+# Compare the **pre** and **post** groups: the sound is the same, but it comes before or after the
+# conditioning. Does the response change? We come back to it in the questions of section 3.7.
 #
 # A raster shows the response trial by trial; the PSTH (next section) puts a number on it.
 
@@ -537,17 +578,18 @@ fig = plot(panels..., layout = (length(bin_sizes), 2), size = (1200, 900), link 
 # ### 3.6 PSTH of the responses to the sound
 #
 # Now that we know how to build a PSTH, let's use it where it matters: **after the stimulus**.
-# We keep the **sound only** trials (no optogenetics, no air puff, section 3.4), and compute the
-# PSTH of units A, B and 288 from 1 s before to 3 s after the trial onset, with 50 ms bins.
+# We keep the **50 pre-conditioning trials** (block 1: the sound alone, before the mouse has
+# learned anything about it, section 3.4), and compute the PSTH of units A, B and 164 from 1 s
+# before to 3 s after the trial onset, with 50 ms bins.
 # `compute_perievent` also accepts the trials themselves (an `IntervalSet`): it aligns the spikes on
 # the start of each trial, and copies the trial metadata into the result.
 # The dashed line is the mean rate in the second before the onset (the **baseline**): a response
 # is a departure from it.
 
 # %%
-sound_trials = trials[trial_type .== "sound"]  # the sound only trials (IntervalSet, with metadata)
+sound_trials = trials[trial_type .== "sound (pre)"]  # the pre-conditioning trials (IntervalSet, with metadata)
 bin_size = 0.05  # 50 ms bins
-println("sound only trials: ", length(sound_trials))
+println("pre-conditioning trials: ", length(sound_trials))
 
 rasters, histograms = [], []
 for (name, i) in post_units
@@ -557,7 +599,7 @@ for (name, i) in post_units
 
     p1 = plot(al, color = colors[name], markersize = 2,
               xlims = (-1, 3), xlabel = "",
-              title = "$name ($i), sound only trials")
+              title = "$name ($i), pre-conditioning trials")
     p2 = bar(t, rate_psth, bar_width = bin_size, color = colors[name], linecolor = colors[name],
              label = "", xlims = (-1, 3), xlabel = "Time from trial onset (s)",
              ylabel = i == post_units[1][2] ? "Rate (Hz)" : "")
@@ -572,14 +614,15 @@ fig = plot(rasters..., histograms..., layout = grid(2, 3, heights = [2 / 3, 1 / 
            size = (1500, 600), left_margin = 5Plots.mm, bottom_margin = 5Plots.mm)
 
 # %% [markdown]
-# - **Unit 288** responds clearly to the sound: a sharp peak in the first 0.3 s.
-# - **Unit B** seems to fire more between about 0.5 and 1.2 s after the onset. Careful: it is silent
-#   in the first half of the sound trials (the start of the session), so this bump comes from the
-#   last ~50 trials only.
-# - **Unit A** does not change much.
+# - **Unit 164** responds clearly to the sound: a sharp peak in the first 0.3 s, about 10 times
+#   its baseline.
+# - **Unit B** fires up to 4 times more than its baseline in the first ~0.5 s.
+# - **Unit A** fires less between about 0.1 and 0.6 s after the onset, then comes back to its
+#   baseline.
 #
-# But is the bump of unit B a real response, or just counting noise? And would we see a shorter
-# response with other bins? Answering by eye is not enough: we need a **statistical test**.
+# These responses look clear, but are they real, or could some bins be high or low just by
+# counting noise? And would we see a shorter response with other bins? Answering by eye is not
+# enough: we need a **statistical test**.
 #
 # ### 3.7 Advanced: beyond bins, the ZETA test
 #
@@ -613,16 +656,16 @@ fig = plot(rasters..., histograms..., layout = grid(2, 3, heights = [2 / 3, 1 / 
 # ZETA also gives an **instantaneous firing rate**, computed from the spike times at several time
 # scales: a PSTH without bins.
 #
-# We run it on the sound only trials for units A, B and 288, and add **unit C** (302, ACAd5),
-# that we will meet again in the optional section 5. With `[start stop]` for each trial,
+# We run it on the same 50 pre-conditioning trials for units A, B and 164, and add **unit C**
+# (114, ORBm6a). With `[start stop]` for each trial,
 # `zetatest` also gives the p-value of a t-test on the mean rate (trial vs baseline), to compare.
 
 # %%
 using ZetaJu
 
-zeta_units = [post_units; "unit C" => 302]  # name => unit id: units A, B, 288 and C
+zeta_units = [post_units; "unit C" => 114]  # name => unit id: units A, B, 164 and C
 colors["unit C"] = TAB[3]
-sound_events = [starts(sound_trials) stops(sound_trials)]  # [start stop] of each sound only trial
+sound_events = [starts(sound_trials) stops(sound_trials)]  # [start stop] of each pre-conditioning trial
 
 zeta = []  # name => (ZETA results, instantaneous rate)
 for (name, i) in zeta_units
@@ -662,22 +705,25 @@ fig = plot(deviations..., ifrs..., layout = (2, 4), size = (1700, 650), link = :
 # Top: the deviation of the data (color) and of 20 jittered resamplings (gray); the black dot is the
 # ZETA. Where the curve goes **up**, the neuron fires more than average; where it goes **down**,
 # less. (The deviation is centered on 0, so the ZETA can also be the low point just *before* a
-# steep rise, as for unit 288.) Bottom: the instantaneous firing rate.
+# steep rise, as for units B, 164 and C.) Bottom: the instantaneous firing rate.
 #
-# - **Unit 288**: a huge deviation, far outside the jittered ones: both tests agree, it responds.
-# - **Unit A**: the deviation stays close to the jittered ones: no clear response (p > 0.05).
-# - **Unit B**: fires *less* during the first 0.4 s, then more until ~1.5 s. Both tests find
-#   a response (but remember that it comes from the last trials only).
+# - **Units B and 164**: a huge deviation, far outside the jittered ones: both tests agree, they
+#   respond.
+# - **Unit A**: the deviation goes **down** after ~0.15 s: the neuron fires less than average.
+#   ZETA finds this decrease clearly, but the t-test is only borderline (p ≈ 0.06): the pause
+#   lasts half a second, and the mean over the 2 s of the trial hides most of it.
 # - **Unit C**: the most interesting case. ZETA finds a strong response, but the t-test on the mean
-#   rate finds nothing (p ≈ 0.5): the neuron fires a brief burst ~80 ms after the onset, then a bit
-#   less than usual, so the total number of spikes hardly changes. A test on the mean rate
-#   cannot see it.
+#   rate finds nothing (p ≈ 0.4): the neuron fires a sharp burst within ~100 ms of the onset, then
+#   almost nothing for the rest of the trial, so the total number of spikes hardly changes. A test
+#   on the mean rate cannot see it.
 #
 # **Questions.**
 #
-# - Plot the binned PSTH of unit C on the sound only trials (as in section 3.6). With which bin
-#   size can you see its response?
-# - Run `zetatest` on the "air puff" trials, or on the "opto only" trials. Do the same units respond?
+# - Plot the binned PSTH of unit C on the pre-conditioning trials (as in section 3.6). With which
+#   bin size can you see its response?
+# - Run `zetatest` on the post-conditioning trials (`"sound (post)"`). Do the same units respond?
+#   Has the response changed after the conditioning?
+# - Same with the "sound + opto" or the "air puff" trials.
 
 # %% [markdown]
 # ## 4. Inter-spike intervals (ISIs) and burstiness
@@ -711,8 +757,8 @@ for (name, i) in examples
 end
 
 # %% [markdown]
-# Similar mean ISI (similar rate), but a very different **spread** of the ISIs
-# (standard deviation): more than 10 times larger for unit B.
+# Unit B has a shorter mean ISI (it fires faster), but a **larger spread** of its ISIs
+# (standard deviation): its ISIs are more variable than those of unit A.
 #
 # ### 4.1 ISI histograms
 #
@@ -720,15 +766,15 @@ end
 # `compute_isi_distribution` counts the ISIs in the bins we give it.
 # We draw it three ways, because each view highlights something different:
 #
-# 1. **0 to 300 ms**: the overall shape. Unit A's ISIs form a broad bump: after a spike,
-#    it rarely fires again within a few ms. Unit B has a sharp peak of very short ISIs
+# 1. **0 to 300 ms**: the overall shape. Unit A's ISIs form a broad bump (around 40 ms): after a
+#    spike, it rarely fires again within a few ms. Unit B has a sharp peak of very short ISIs
 #    (below 10 ms): when it fires, it often fires several spikes in quick succession, a **burst**.
 # 2. **zoom on 0 to 20 ms**: just after a spike, a neuron cannot fire again for ~1–2 ms:
 #    this is the **refractory period**. A good single unit has (almost) no ISIs there.
-#    Unit B's burst ISIs are around 7–8 ms.
+#    Unit B has no ISI below ~4 ms, and its burst ISIs are around 5–8 ms.
 # 3. **log scale**: ISIs range from milliseconds to minutes. With bins that are
 #    evenly spaced on a logarithmic axis, we see all time scales at once. Unit A has a single
-#    bump around 100 ms. Unit B has **two bumps**: the short ISIs inside bursts (~8 ms),
+#    bump around 50 ms. Unit B has **two bumps**: the short ISIs inside bursts (~6 ms),
 #    and the longer ISIs between bursts (~100 ms).
 
 # %%
@@ -799,7 +845,7 @@ for (name, _) in examples
 end
 
 # %% [markdown]
-# Unit A has $B < 0$ (slightly more regular than Poisson) and unit B has $B > 0$ (bursty).
+# Unit A has $B \approx 0$ (close to random, Poisson firing) and unit B has $B > 0$ (bursty).
 #
 # **Check with a Poisson process.** If spikes are thrown at random, uniformly in time,
 # the ISIs follow an exponential distribution and $B$ should be close to 0.
@@ -808,7 +854,7 @@ end
 # %%
 rng = Xoshiro(0)  # random generator with a fixed seed: same result for everyone
 
-n_poisson = length(pfc[id = 185])  # same number of spikes as unit A
+n_poisson = length(pfc[id = 55])  # same number of spikes as unit A
 t_start, t_end = starts(session)[1], stops(session)[1]  # same duration as the session
 
 # n_poisson random spike times, uniformly distributed over the session (Ts sorts them in time)
@@ -818,9 +864,10 @@ println("Poisson rate: ", round(rate(poisson), digits = 2), " Hz")
 @printf("Poisson B   : %+.3f\n", burstiness(values(time_diff(poisson))))
 
 # %% [markdown]
-# **Careful: the standard deviation is sensitive to a few very long ISIs.**
-# Unit B is almost silent during the first minutes of the session, which gives it a few
-# very long ISIs (up to two minutes). Let's see how much they weigh in $B$.
+# **Careful: the standard deviation is sensitive to a few very long ISIs.** If a neuron stops
+# firing for a few minutes (it happens: changes of state, drift of the electrode), these few very
+# long ISIs can weigh a lot in $B$. Let's check the longest ISIs of unit B, and how much they
+# weigh.
 
 # %%
 isi_B = sort(isis["unit B"])  # ISIs of unit B, sorted from shortest to longest
@@ -829,13 +876,15 @@ println("5 longest ISIs of unit B (s): ", round.(isi_B[end-4:end], digits = 1))
 @printf("B without the 5 longest   : %+.3f\n", burstiness(isi_B[1:end-5]))  # still bursty, but less
 
 # %% [markdown]
-# Removing only 5 ISIs out of more than 40,000 changes $B$ a lot. Computed over the whole
-# session, $B$ mixes the way the neuron fires with two other things that also make the ISIs
-# more variable:
+# Here it hardly changes: unit B fires all along the session, and its longest ISIs are only a few
+# seconds. But for a unit that stops firing for minutes, a handful of ISIs out of tens of
+# thousands can change $B$ a lot (try it with other units!). Computed over the whole session, $B$
+# mixes the way the neuron fires with two other things that also make the ISIs more variable:
 #
-# - **slow changes of the rate** over the session (like the silent start of unit B);
+# - **slow changes of the rate** over the session (silences, drift);
 # - **what happens during the trials**: sounds and air puffs can make a neuron fire many
-#   spikes in a row, or stop firing, which artificially boosts $B$.
+#   spikes in a row (like unit B, section 3.6), or stop firing (like unit A), which artificially
+#   boosts $B$.
 #
 # ### 4.3 Burstiness in the inter-trial intervals
 #
@@ -1220,14 +1269,17 @@ fig = plot(panels["a"], panels["b"], panels["d"], panels["c"], panels["e"], size
 # are not exactly 0 for $M$, or for $B$ in a: small samples are noisy. Rerun the cell to see
 # them change.)
 #
-# **In our data.** We add a third example unit, **unit C** (`302`, ACAd5, met in section 3.7), which has almost
-# the same burstiness as unit B but a **negative** memory. Below, we draw the 3 s ITI windows
-# with the most spikes for units B and C, as in the figure above. Next to them, the same
-# windows after **shuffling the order of their ISIs**: same ISIs, no memory.
+# **In our data.** We add two example units: **unit D** (`209`, PL5), which is about as bursty as
+# unit B but has a **negative** memory, and **unit E** (`131`, ORBm6a), which is not bursty at all
+# ($B \approx 0$, like unit A) but has a strong **positive** memory, like the train d above. Below,
+# we draw the 3 s ITI windows with the most spikes for units B, D and E, as in the figure above.
+# Next to them, the same windows after **shuffling the order of their ISIs**: same ISIs, no
+# memory.
 
 # %%
-memory_units = [examples; "unit C" => 302]  # name => unit id: units A, B and C
-colors["unit C"] = TAB[3]  # color of unit C in the next figures
+memory_units = [examples; "unit D" => 209; "unit E" => 131]  # name => unit id: units A, B, D and E
+colors["unit D"] = TAB[6]  # colors of units D and E in the next figures
+colors["unit E"] = TAB[9]
 
 isi_windows = Dict(name => isis_per_window(pfc[id = i], iti, min_isi) for (name, i) in memory_units)
 for (name, i) in memory_units
@@ -1239,7 +1291,7 @@ end
 
 n_show = 4  # number of windows to draw per unit
 panels = []
-for name in ["unit B", "unit C"]
+for name in ["unit B", "unit D", "unit E"]
     isi_list = isi_windows[name]
     busiest = sortperm(length.(isi_list))[end-n_show+1:end]  # windows with the most ISIs
     p_orig = plot(yticks = false, ylabel = name)
@@ -1258,16 +1310,19 @@ for name in ["unit B", "unit C"]
 end
 plot!(panels[1], title = "ISIs in their original order")
 plot!(panels[2], title = "same ISIs, shuffled order")
-plot!(panels[3], xlabel = "Time from the first spike of the window (s)")
-plot!(panels[4], xlabel = "Time from the first spike of the window (s)")
-fig = plot(panels..., layout = (2, 2), size = (1200, 400), link = :x, left_margin = 5Plots.mm,
+plot!(panels[end-1], xlabel = "Time from the first spike of the window (s)")
+plot!(panels[end], xlabel = "Time from the first spike of the window (s)")
+fig = plot(panels..., layout = (3, 2), size = (1200, 600), link = :x, left_margin = 10Plots.mm,
            bottom_margin = 5Plots.mm)
 
 # %% [markdown]
-# Unit B fires **bursts of several spikes**: short ISIs come in a row. Unit C mostly fires
-# **pairs of spikes** (doublets) followed by a pause: a short ISI is followed by a long one.
-# After shuffling, the short ISIs of unit B no longer come in a row: its long bursts break
-# into smaller pieces, although the ISIs are exactly the same.
+# Units B and D both fire spikes close together, separated by pauses. Unit D mostly fires **pairs
+# of spikes** (doublets) followed by a pause: a short ISI is followed by a long one. After
+# shuffling, its short ISIs sometimes come in a row: groups of three or more spikes appear,
+# although the ISIs are exactly the same. Unit E has no very short ISIs, but its spikes come in
+# **slow waves**: periods where it fires fast (short ISIs in a row) and periods where it fires
+# slowly (long ISIs in a row). After shuffling, the fast and slow periods are mixed up. These
+# differences are subtle by eye: the return map below shows them better.
 
 # %% [markdown]
 # ### 5.2 Return map
@@ -1290,14 +1345,19 @@ for (name, _) in memory_units
     plot!(p, [1e-3, 3], [1e-3, 3], color = :black, ls = :dot, lw = 1, label = "")  # diagonal
     push!(panels, p)
 end
-fig = plot(panels..., layout = (1, 3), size = (1500, 500), link = :all, left_margin = 5Plots.mm,
+fig = plot(panels..., layout = (1, 4), size = (1800, 500), link = :all, left_margin = 10Plots.mm,
            bottom_margin = 5Plots.mm)
 
 # %% [markdown]
-# - **Unit B**: the dots gather in the bottom-left corner (a short ISI followed by a short one:
-#   inside a burst) and along the diagonal.
-# - **Unit C**: the map has the shape of a **cross**: a short ISI (~10 ms) is followed by a
-#   long one (~100 ms), and a long one by a short one. Few pairs of short ISIs: no long bursts.
+# - **Unit A**: a round cloud, without any orientation: no memory ($M \approx 0$).
+# - **Unit B**: the map has the shape of a **cross** (a short ISI followed by a long one, or the
+#   reverse: doublets), but also has pairs of short ISIs in the bottom-left corner (bursts of three
+#   spikes or more) and along the diagonal. The two effects cancel out: $M \approx 0$.
+# - **Unit D**: a clean **cross**: a short ISI (~4 ms) is almost always followed by a long one
+#   (~100 ms), and a long one by a short one. Very few pairs of short ISIs: doublets, and a
+#   negative memory.
+# - **Unit E**: the cloud is **stretched along the diagonal**: a short ISI is followed by a short
+#   one, and a long one by a long one. A positive memory, without any burst.
 #
 # ### 5.3 Memory of all PFC units, and the burstiness–memory plane
 #
@@ -1315,7 +1375,8 @@ println("units: ", length(valid))
 println("median memory: ", round(median(valid[:memory_iti]), digits = 3))
 println("units with positive memory: ", sum(valid[:memory_iti] .> 0), " out of ", length(valid))
 
-highlight["unit C"] = (TAB[6], :diamond)  # color and marker of unit C in the population plots
+highlight["unit D"] = (TAB[6], :diamond)  # colors and markers of units D and E in the population plots
+highlight["unit E"] = (TAB[9], :utriangle)
 
 """Left: smoothed density of the memory per area. Right: the (memory, burstiness) plane."""
 function plot_memory_burstiness(valid, m_column, b_column, m_label, b_label, title)
@@ -1333,7 +1394,7 @@ function plot_memory_burstiness(valid, m_column, b_column, m_label, b_label, tit
         scatter!(p2, valid[m_column][sel], valid[b_column][sel], markersize = 4, color = color,
                  markerstrokewidth = 0, label = a)
     end
-    for (name, i) in memory_units  # the three example units
+    for (name, i) in memory_units  # the example units
         color, marker = highlight[name]
         scatter!(p2, [pfc[m_column, id = i]], [pfc[b_column, id = i]], markershape = marker,
                  markersize = 9, markercolor = RGBA(1, 1, 1, 0), markerstrokecolor = color,
@@ -1419,9 +1480,9 @@ fig
 
 # %% [markdown]
 # Almost all units have a **positive memory**: in the ITIs, short ISIs tend to follow short
-# ones, beyond what the window-to-window changes of rate explain. Memory and burstiness are
-# barely correlated: they capture **two different properties** of the spike trains, so it is
-# worth measuring both.
+# ones, beyond what the window-to-window changes of rate explain. Memory and burstiness are only
+# weakly correlated (and negatively: the most bursty units, like unit D, tend to fire doublets):
+# they capture **two different properties** of the spike trains, so it is worth measuring both.
 #
 # **Questions.**
 #

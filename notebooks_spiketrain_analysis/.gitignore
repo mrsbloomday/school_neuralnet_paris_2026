@@ -16,3 +16,6 @@ units_summary_*.csv
 .DS_Store
 .ipynb_checkpoints/
 __pycache__/
+
+# Editor settings
+.zed/

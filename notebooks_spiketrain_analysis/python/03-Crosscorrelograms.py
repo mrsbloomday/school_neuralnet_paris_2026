@@ -1,5 +1,5 @@
 # %% [markdown]
-# # 02 · Cross-correlograms and functional connectivity — **Python / pynapple & SpikeInterface**
+# # 03 · Cross-correlograms and functional connectivity — **Python / pynapple & SpikeInterface**
 #
 # The brain is a network of neurons, and we can study it through its **connectivity**:
 #
@@ -31,7 +31,7 @@
 # 5. scan **all pairs** of a recording with [SpikeInterface](https://spikeinterface.readthedocs.io),
 #    build a connectivity matrix, and (advanced) compare the networks between the blocks of the task.
 #
-# **Dataset.** Session `156131_20191112-probe0` of the same study as notebook 01
+# **Dataset.** Session `156131_20191112-probe0` (the same as in notebooks 01 and 02)
 # ([Calvigioni, Fuzik, Le Merre et al., 2023](https://doi.org/10.1038/s41593-023-01367-8)): a
 # Vglut2-cre mouse, with a Neuropixels probe through the prefrontal cortex (prelimbic, infralimbic,
 # orbital, anterior cingulate areas) and nearby regions. The session is made of **blocks** of trials:
@@ -159,6 +159,7 @@ good.location.value_counts()  # how many units per brain area
 # %%
 rng = np.random.default_rng(seed=0)  # random generator with a fixed seed: same result for everyone
 
+# Make some toy example
 T_toy = 20.0  # duration of the toy spike trains, in seconds
 toy_i = np.sort(rng.uniform(0, T_toy, size=100))  # neuron i: 100 random spikes (5 Hz)
 followed = toy_i[rng.random(len(toy_i)) < 0.5]  # about half of the spikes of i...

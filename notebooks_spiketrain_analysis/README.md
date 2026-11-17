@@ -49,7 +49,7 @@ uv sync
 ```
 
 This creates `python/.venv` with the exact package versions in `uv.lock`
-(pynapple, h5py, matplotlib, ipykernel, jupytext).
+(pynapple, h5py, matplotlib, scikit-learn, tensorly, umap-learn, minisom, zetapy, ipykernel, jupytext).
 
 This environment is separate from the SpikeInterface environment at the root of the repo
 (`school_neuralnet_paris_2026/pyproject.toml`). Run the `uv` commands below from `python/`
@@ -138,11 +138,19 @@ Any of these works with the kernels above:
 
 ## 5. Data
 
-The NWB files are not in the repo. Each notebook and script reads its file from the `NWB = ...`
-line at the top: change that path to where the file is on your computer.
+The data are not in the repo. They are on the [DANDI Archive](https://dandiarchive.org),
+in [Dandiset 000473](https://dandiarchive.org/dandiset/000473). All the notebooks use the same session,
+`sub-156131/sub-156131_ses-156131-20191112-probe0_ecephys+ogen.nwb` (5.6 GB).
 
-| File | Session |
-|---|---|
-| `python/01-SpikeRate_and_SpikeIntervals.ipynb` | `216300_20200518-probe0.nwb or DandiAPIClient` |
-| `julia/01-SpikeRate_and_SpikeIntervals.ipynb` | `216300_20200521-probe0.nwb` |
+**Download it** to a folder of your choice, from the browser, on the
+[files page of the Dandiset](https://dandiarchive.org/dandiset/000473/0.261102.1657/files?location=sub-156131),
+or with the DANDI command-line tool, from `python/`:
 
+```bash
+uv run dandi download -o /path/to/your/data/folder "https://api.dandiarchive.org/api/assets/6b424b64-764a-4677-a828-49094420e930/download/"
+```
+
+Then set `NWB = ...` at the top of each notebook to the full path of the file.
+
+**Or stream it** without downloading (Python only): set `STREAM = True` at the top of the notebook.
+Section 0 of notebook 01 explains both options.

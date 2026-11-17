@@ -1,5 +1,5 @@
 # %% [markdown]
-# # 02 · Cross-correlograms and functional connectivity — **Julia / Judananas**
+# # 03 · Cross-correlograms and functional connectivity — **Julia / Judananas**
 #
 # The brain is a network of neurons, and we can study it through its **connectivity**:
 #
@@ -21,7 +21,7 @@
 #
 # This notebook is based on the internship work of Matthieu Trollé (ENS de Lyon, 2026), *Efficient
 # cross-correlogram computations for large-scale functional connectivity analysis*. It is the Julia
-# version of `python/02-Crosscorrelograms.ipynb`: same steps, same text, same figures. We:
+# version of `python/03-Crosscorrelograms.ipynb`: same steps, same text, same figures. We:
 #
 # 1. build the CCG from its definition, and see three ways to compute it (counting, a sliding dot
 #    product, the Fourier transform), and what they cost;
@@ -31,7 +31,7 @@
 # 5. scan **all pairs** of a recording, build a connectivity matrix, and (advanced) compare the
 #    networks between the blocks of the task.
 #
-# **Dataset.** Session `156131_20191112-probe0` of the same study as notebook 01
+# **Dataset.** Session `156131_20191112-probe0` (the same as in notebooks 01 and 02)
 # ([Calvigioni, Fuzik, Le Merre et al., 2023](https://doi.org/10.1038/s41593-023-01367-8)): a
 # Vglut2-cre mouse, with a Neuropixels probe through the prefrontal cortex (prelimbic, infralimbic,
 # orbital, anterior cingulate areas) and nearby regions. The session is made of **blocks** of trials:
