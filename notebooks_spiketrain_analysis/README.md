@@ -8,7 +8,7 @@ The goal of this repo is to get acquainted to the main methods used to analyze s
 - Population coding and embedding
 - Decoding
 
-The main track of this workshop is using Python. We take advantage of many great python packages that deserve their stars on GitHub:
+The main track of this workshop is using Python. We take advantage of great python packages that deserve their stars on GitHub:
 
 - [spike interface](https://github.com/SpikeInterface/spikeinterface)
 - [pynapple](https://pynapple.org)
