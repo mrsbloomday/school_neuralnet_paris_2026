@@ -9,7 +9,7 @@ Material for SpikeInterface Tutorial @ Neuralnet 2026
 You will need to download this [folder](https://filesender.renater.fr/?s=download&token=e07dbaac-ecc7-4825-a615-496f2bdcfa45)
 Please unzip all in sub folders.
 
-Note that this dataset is originally from [dansiset 000939](https://dandiarchive.org/dandiset/000939/0.260512.1701/files?location=sub-A3702) but in a shorter version (90s). You can eventually download the original nwb file but is not mandatory.
+Note that this dataset is originally from [dandiset 000939](https://dandiarchive.org/dandiset/000939/0.260512.1701/files?location=sub-A3702) but in a shorter version (90s). You can eventually download the original nwb file but is not mandatory.
 
 
 
