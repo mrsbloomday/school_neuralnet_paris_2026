@@ -9,4 +9,5 @@ dependencies = [
     "spikeinterface[full,widgets,lupin]>=0.105.2",
     "spikeinterface-gui[desktop,web]",
     "pandas>=3.0.6",
+    "ipympl>=0.10.0",
 ]
